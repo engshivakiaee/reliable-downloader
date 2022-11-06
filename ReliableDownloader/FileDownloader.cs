@@ -37,35 +37,35 @@ namespace ReliableDownloader
             var remoteFileSize = responseHeaders.Content.Headers?.ContentRange?.Length
                                 ?? responseHeaders.Content?.Headers?.ContentLength
                                 ?? 0;
+
+            if (remoteFileSize == 0) throw new Exception("Remote file size is zero");
+
             do
             {
                 try
                 {
+
                     var localFileInfo = new FileInfo(localFilePath);
 
                     if (localFileInfo.Exists)
                     {
-                        if (responseHeaders.Headers.AcceptRanges != null
-                         && localFileSize > 0 && remoteFileSize > 0
-                         && localFileSize != remoteFileSize)
+                        localFileSize = localFileInfo.Length;
+
+                        if (localFileSize == remoteFileSize) return true;
+
+                        if (responseHeaders.Headers.AcceptRanges != null)
                         {
                             var responsePartiallContent = await _webSystemCalls.DownloadPartialContent(contentFileUrl, localFileSize, remoteFileSize, _cancellationToken.Token);
-                            await SaveToFile(new FileSave(localFilePath, responsePartiallContent, remoteFileSize, null, FileMode.Append, onProgressChanged));
+                            await SaveToFile(new FileSave(localFilePath, responsePartiallContent, remoteFileSize, FileMode.Append, onProgressChanged));
                             break;
                         }
-                        else  return true;
-                    }
 
-                    var tempFilePath = Path.ChangeExtension(localFilePath, ".tmp");
-
-                    if (File.Exists(tempFilePath))
-                    {
-                        File.Delete(tempFilePath);
+                        localFileInfo.Delete();
                     }
 
                     var responseContent = await _webSystemCalls.DownloadContent(contentFileUrl, _cancellationToken.Token);
 
-                    await SaveToFile(new FileSave(localFilePath, responseContent, remoteFileSize, tempFilePath, FileMode.Create, onProgressChanged));
+                    await SaveToFile(new FileSave(localFilePath, responseContent, remoteFileSize, FileMode.Create, onProgressChanged));
                 }
 
                 catch (Exception ex)
@@ -105,9 +105,7 @@ namespace ReliableDownloader
             const int maxBufferSize = 0x10000;
             using (var inputStream = await fileSave.Response.Content.ReadAsStreamAsync())
             {
-                using (var fileStream = new FileStream(fileSave.FileMode == FileMode.Create ?
-                                                        fileSave.TempFilePath :
-                                                        fileSave.LocalFilePath,
+                using (var fileStream = new FileStream( fileSave.LocalFilePath,
                                                         fileSave.FileMode,
                                                         FileAccess.Write,
                                                         FileShare.None,
@@ -138,8 +136,6 @@ namespace ReliableDownloader
                     fileSave.OnProgressChanged?.Invoke(new FileProgress(fileSave.RemoteFileSize, bytesTransferred, 100, CalculateRemainingTime()));
                 }
             }
-            if (fileSave.FileMode == FileMode.Create)
-                File.Move(fileSave.TempFilePath, fileSave.LocalFilePath);
         }
 
         private static bool IsNetworkError(Exception ex)
