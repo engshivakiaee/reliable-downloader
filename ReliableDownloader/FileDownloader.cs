@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,9 +16,67 @@ namespace ReliableDownloader
             _webSystemCalls = webSystemCalls;
         }
 
-        public Task<bool> DownloadFile(string contentFileUrl, string localFilePath, Action<FileProgress> onProgressChanged)
+        public async Task<bool> DownloadFile(string contentFileUrl, string localFilePath, Action<FileProgress> onProgressChanged)
         {
-            throw new NotImplementedException();
+            long localFileSize = 0;
+            var exceptions = new List<Exception>();
+            var uniqueExceptions = new List<Exception>();
+
+            var responseHeaders = await _webSystemCalls.GetHeadersAsync(contentFileUrl, _cancellationToken.Token);
+
+            if (!responseHeaders.IsSuccessStatusCode)
+                throw new Exception($"Http response is not ok. Status code is {responseHeaders.StatusCode} ");
+
+            if (responseHeaders.Content == null)
+                throw new Exception("Response content is null");
+
+            var remoteFileSize = responseHeaders.Content.Headers?.ContentRange?.Length
+                                ?? responseHeaders.Content?.Headers?.ContentLength
+                                ?? 0;
+            do
+            {
+                try
+                {
+                    var localFileInfo = new FileInfo(localFilePath);
+
+                    if (localFileInfo.Exists)
+                    {
+                        if (responseHeaders.Headers.AcceptRanges != null
+                         && localFileSize > 0 && remoteFileSize > 0
+                         && localFileSize != remoteFileSize)
+                        {
+                            var responsePartiallContent = await _webSystemCalls.DownloadPartialContent(contentFileUrl, localFileSize, remoteFileSize, _cancellationToken.Token);
+                            await SaveToFile(new FileSave(localFilePath, responsePartiallContent, remoteFileSize, null, FileMode.Append, onProgressChanged));
+                            break;
+                        }
+                    }
+
+                    var tempFilePath = Path.ChangeExtension(localFilePath, ".tmp");
+
+                    if (File.Exists(tempFilePath))
+                    {
+                        File.Delete(tempFilePath);
+                    }
+
+                    var responseContent = await _webSystemCalls.DownloadContent(contentFileUrl, _cancellationToken.Token);
+
+                    await SaveToFile(new FileSave(localFilePath, responseContent, remoteFileSize, tempFilePath, FileMode.Create, onProgressChanged));
+                }
+
+                catch (Exception ex)
+                {
+                    exceptions.Add(ex);
+                }
+
+            }
+            while (remoteFileSize > 0 && localFileSize > 0 && remoteFileSize != localFileSize && !_cancellationToken.IsCancellationRequested);
+
+            if (File.Exists(localFilePath))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public void CancelDownloads()
@@ -65,6 +124,12 @@ namespace ReliableDownloader
             }
             if (fileSave.FileMode == FileMode.Create)
                 File.Move(fileSave.TempFilePath, fileSave.LocalFilePath);
+        }
+
+        private static TimeSpan CalculateRemainingTime()
+        {
+            //todo: implement the remaining time
+            return new TimeSpan();
         }
     }
 }
