@@ -26,7 +26,11 @@ namespace ReliableDownloader
             // If this url 404's, you can get a live one from https://installerstaging.accurx.com/chain/latest.json.
             var exampleUrl = "https://installerstaging.accurx.com/chain/3.182.57641.0/accuRx.Installer.Local.msi";
             var exampleFilePath = "C:/Users/[USER]/myfirstdownload.msi";
-            await fileDownloader.DownloadFile(exampleUrl, exampleFilePath, progress => { Console.WriteLine($"Percent progress is {progress.ProgressPercent}"); });
+            var result = await fileDownloader.DownloadFile(exampleUrl, exampleFilePath, progress => { Console.WriteLine($"Percent progress is {progress.ProgressPercent}"); });
+            if (result)
+                Console.WriteLine($"File downloaded successfully in {exampleFilePath}");
+
+            Console.ReadKey(true);
         }
 
         static void UnhandledExceptionTrapper(object sender, UnhandledExceptionEventArgs e)
