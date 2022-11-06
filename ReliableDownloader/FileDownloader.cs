@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,6 +24,7 @@ namespace ReliableDownloader
             long localFileSize = 0;
             var exceptions = new List<Exception>();
             var uniqueExceptions = new List<Exception>();
+            var maxTry = 0;
 
             var responseHeaders = await _webSystemCalls.GetHeadersAsync(contentFileUrl, _cancellationToken.Token);
 
@@ -68,8 +72,19 @@ namespace ReliableDownloader
                     exceptions.Add(ex);
                 }
 
+                maxTry++;
+
+                // Wait a bit and try again later
+                if (exceptions.Any()) await Task.Delay(2000, _cancellationToken.Token);
+
             }
-            while (remoteFileSize > 0 && localFileSize > 0 && remoteFileSize != localFileSize && !_cancellationToken.IsCancellationRequested);
+            while ((remoteFileSize > 0 && localFileSize > 0 && remoteFileSize != localFileSize && !_cancellationToken.IsCancellationRequested)
+                || (IsUniqueException(exceptions) && maxTry <= 5));
+
+            if (exceptions.Any())
+            {
+                throw new AggregateException("Downloading can not be continued", exceptions);
+            }
 
             if (File.Exists(localFilePath))
             {
@@ -124,6 +139,20 @@ namespace ReliableDownloader
             }
             if (fileSave.FileMode == FileMode.Create)
                 File.Move(fileSave.TempFilePath, fileSave.LocalFilePath);
+        }
+
+        private static bool IsNetworkError(Exception ex)
+        {
+            if (ex is SocketException || ex is WebException)
+                return true;
+            if (ex.InnerException != null)
+                return IsNetworkError(ex.InnerException);
+            return false;
+        }
+
+        private static bool IsUniqueException(List<Exception> exceptions)
+        {
+            return exceptions.Distinct().Count() == 1;
         }
 
         private static TimeSpan CalculateRemainingTime()
