@@ -53,6 +53,7 @@ namespace ReliableDownloader
                             await SaveToFile(new FileSave(localFilePath, responsePartiallContent, remoteFileSize, null, FileMode.Append, onProgressChanged));
                             break;
                         }
+                        else  return true;
                     }
 
                     var tempFilePath = Path.ChangeExtension(localFilePath, ".tmp");
