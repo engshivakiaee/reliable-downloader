@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ReliableDownloader
@@ -6,6 +7,7 @@ namespace ReliableDownloader
     public class FileDownloader : IFileDownloader
     {
         private readonly IWebSystemCalls _webSystemCalls;
+        private CancellationTokenSource _cancellationToken = new CancellationTokenSource();
 
         public FileDownloader(IWebSystemCalls webSystemCalls)
         {
