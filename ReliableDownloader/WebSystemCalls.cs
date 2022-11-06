@@ -7,11 +7,9 @@ namespace ReliableDownloader
 {
     public class WebSystemCalls : IWebSystemCalls
     {
-
         private static HttpClientHandler _handler = new HttpClientHandler
         {
-            //to prevent hanging server when many concurrent connections to the server
-            MaxConnectionsPerServer = int.MaxValue,
+            MaxConnectionsPerServer = int.MaxValue,//to prevent hanging server when many concurrent connections to the server
             UseDefaultCredentials = true
         };
 
@@ -28,18 +26,20 @@ namespace ReliableDownloader
 
         public async Task<HttpResponseMessage> DownloadContent(string url, CancellationToken token)
         {
+            //HttpCompletionOption.ResponseHeadersRead tells the Get async method that only receive header completely and then provide the rest of the operation to receive the Response body as a Stream for the continuation of the program
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url))
             {
-                return await _client.SendAsync(httpRequestMessage, token).ConfigureAwait(continueOnCapturedContext: false);
+                return await _client.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(continueOnCapturedContext: false);
             }
         }
 
         public async Task<HttpResponseMessage> DownloadPartialContent(string url, long from, long to, CancellationToken token)
         {
+            //HttpCompletionOption.ResponseHeadersRead tells the Get async method that only receive header completely and then provide the rest of the operation to receive the Response body as a Stream for the continuation of the program
             using (var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url))
             {
                 httpRequestMessage.Headers.Range = new RangeHeaderValue(from, to);
-                return await _client.SendAsync(httpRequestMessage, token).ConfigureAwait(continueOnCapturedContext: false);
+                return await _client.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(continueOnCapturedContext: false);
             }
         }
     }
