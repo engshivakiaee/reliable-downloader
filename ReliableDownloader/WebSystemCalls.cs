@@ -7,7 +7,13 @@ namespace ReliableDownloader
 {
     public class WebSystemCalls : IWebSystemCalls
     {
-        private static readonly HttpClient _client = new HttpClient();
+
+        private static readonly HttpClient _client = new HttpClient()
+        {
+            //To prevent facing with TaskCancelledException while speed is low, timout is set to Timeout.InfiniteTimeSpan
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
+
 
         public async Task<HttpResponseMessage> GetHeadersAsync(string url, CancellationToken token)
         {
