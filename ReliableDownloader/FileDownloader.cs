@@ -96,7 +96,7 @@ namespace ReliableDownloader
 
         public void CancelDownloads()
         {
-            throw new NotImplementedException();
+            _cancellationToken.Cancel();
         }
 
         private async Task SaveToFile(FileSave fileSave)
