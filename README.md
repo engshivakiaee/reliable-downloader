@@ -1,11 +1,27 @@
-# Reliable Downloader Exercise 🖥️
+# reliable_downloader
 
 ## Description
+Reliable downloader that can download high volume sized files completely even when internet connection is weak. Moreover, it supports resumeing after disconnection.
 
-- Performing a normal GET on a file won't be reliable for two reasons. Firstly, we need to be able to recover from internet disconnections. Secondly, we need to not have to start from scratch every time, with intermittent internet disconnection and slow internet, it's unlikely we'll be able to download the whole file in one go.
+## Getting Started
 
-- Luckily, some CDNs support downloading partial content so if we can get part of the way through, we can resume from this point.
+### Running the program
 
-- If the URL does not support partial content then we attempt to just download the whole file.
+Using Visual Studio F5, or if you are using NET cli, you can run the program by typing the following command in the terminal:
 
-- Clinicians need to eventually receive new updates as they're sent out, even if it takes many attempts due to their internet connection. Your solution needs to recover from failures and should not exit until the file has been successfully downloaded.
+```
+dotnet run
+```
+
+### Running the tests
+
+```
+dotnet test
+```
+
+## Authors
+
+Contributors names and contact info
+
+Shiva Kiaee
+https://github.com/engshivakiaee
